@@ -8,7 +8,7 @@ const READER_DB_ID = process.env.READER_DB_ID;
 const parser = new Parser();
 
 /**
- * feederデータベースから "Enable" が true のページを取得し、
+ * feeder データベースから "Enable" が true のページを取得し、
  * { feedUrl, keywords } の配列を返す
  */
 async function getFeeds() {
@@ -30,9 +30,9 @@ async function getFeeds() {
     const feeds = response.results.map((page) => {
       // 「URL」は URL型プロパティを想定
       const feedUrl = page.properties.URL?.url;
-      // 「keyword」はマルチセレクトを想定
-      const multiSelect = page.properties.keyword?.multi_select ?? [];
 
+      // 「keyword」はマルチセレクトを想定 (配列)
+      const multiSelect = page.properties.keyword?.multi_select ?? [];
       // name だけ取り出したキーワード配列
       const keywords = multiSelect.map((x) => x.name);
 
@@ -54,7 +54,9 @@ async function getFeeds() {
 }
 
 /**
- * RSS フィードを取得し、keyword のいずれかにマッチする記事だけ Notion に保存
+ * RSS フィードを取得し、以下の条件を満たす記事だけ Notion に保存
+ * - 直近1週間以内の記事
+ * - (keyword が空ならすべて) OR (keyword があるならタイトルにいずれかのキーワードが含まれるもの)
  */
 async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
   console.log(`[INFO] Fetching feed for URL: ${feedUrl}`);
@@ -70,6 +72,10 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
 
   console.log(`[INFO] Fetched feed: "${feed.title}". Total items: ${feed.items?.length ?? 0}`);
 
+  // 直近1週間の基準日
+  const now = new Date();
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
   for (const [index, item] of feed.items.entries()) {
     const title = item.title ?? 'No Title';
     const link = item.link ?? '';
@@ -77,23 +83,35 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
 
     // pubDate を ISO8601 形式に変換
     let isoDate = null;
+    let pubDate = null;
     if (pubDateString) {
       const parsed = new Date(pubDateString);
       if (!isNaN(parsed)) {
-        isoDate = parsed.toISOString();
+        pubDate = parsed;             // JS Date オブジェクト
+        isoDate = parsed.toISOString(); // Notion へ登録する際の文字列
       }
     }
 
-    // キーワード判定（タイトルのみで判定する例）
-    const lowerTitle = title.toLowerCase();
-    // いずれかの keyword が含まれていれば true
-    const isMatch = keywords.some((kw) => lowerTitle.includes(kw.toLowerCase()));
+    // 直近1週間以内かチェック
+    // pubDate が取れない場合は対象外にするかどうか、運用次第で決めてください
+    if (!pubDate || pubDate < oneWeekAgo) {
+      console.log(`[INFO] [${index + 1}/${feed.items.length}] "${title}" => older than 1 week => SKIP`);
+      continue;
+    }
+
+    // キーワードが空の場合はすべて登録、それ以外は判定
+    let isMatch = true;
+    if (keywords.length > 0) {
+      const lowerTitle = title.toLowerCase();
+      isMatch = keywords.some((kw) => lowerTitle.includes(kw.toLowerCase()));
+    }
 
     if (!isMatch) {
       console.log(`[INFO] [${index + 1}/${feed.items.length}] "${title}" => NO MATCH => SKIP`);
       continue;
     }
 
+    // ここまで来たものは登録
     console.log(`[INFO] [${index + 1}/${feed.items.length}] Creating page in Notion for "${title}"`);
 
     try {
@@ -149,7 +167,7 @@ async function main() {
       return;
     }
 
-    // 2. 各フィードごとに RSS を取得し、キーワードマッチした記事だけを reader DB に追加
+    // 2. 各フィードごとに RSS を取得し、条件にマッチした記事だけを reader DB に追加
     for (const feedInfo of feeds) {
       await fetchAndStoreFeedArticles(feedInfo);
     }
