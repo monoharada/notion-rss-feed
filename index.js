@@ -1,5 +1,5 @@
-import { Client } from '@notionhq/client';
-import Parser from 'rss-parser';
+import { Client } from "@notionhq/client";
+import Parser from "rss-parser";
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const FEEDER_DB_ID = process.env.FEEDER_DB_ID;
@@ -7,13 +7,15 @@ const READER_DB_ID = process.env.READER_DB_ID;
 const parser = new Parser();
 
 async function getFeedUrls() {
-  console.log('[INFO] Start getFeedUrls() ...');
+  console.log("[INFO] Start getFeedUrls() ...");
   try {
     const response = await notion.databases.query({
-      database_id: FEEDER_DB_ID
+      database_id: FEEDER_DB_ID,
     });
 
-    console.log(`[INFO] getFeedUrls() response length: ${response.results.length}`);
+    console.log(
+      `[INFO] getFeedUrls() response length: ${response.results.length}`
+    );
 
     // 「URL」プロパティが URL 型の場合、page.properties.URL?.url でアクセスできる
     const feedUrls = response.results
@@ -30,7 +32,7 @@ async function getFeedUrls() {
     console.log(`[INFO] Extracted feed URLs: ${JSON.stringify(feedUrls)}`);
     return feedUrls;
   } catch (error) {
-    console.error('[ERROR] Failed to get feed URLs:', error);
+    console.error("[ERROR] Failed to get feed URLs:", error);
     throw error;
   }
 }
@@ -44,14 +46,30 @@ async function fetchAndStoreFeedArticles(feedUrl) {
     console.error(`[ERROR] Failed to parse RSS from URL: ${feedUrl}`, error);
     return;
   }
-  console.log(`[INFO] Fetched feed: "${feed.title}". Total items: ${feed.items?.length ?? 0}`);
+  console.log(
+    `[INFO] Fetched feed: "${feed.title}". Total items: ${
+      feed.items?.length ?? 0
+    }`
+  );
 
   for (const [index, item] of feed.items.entries()) {
-    const title = item.title ?? 'No Title';
-    const link = item.link ?? '';
-    const pubDate = item.pubDate ?? null;
+    const title = item.title ?? "No Title";
+    const link = item.link ?? "";
+    const pubDateString = item.pubDate ?? null;
+    
+    let isoDate = null;
+    if (pubDateString) {
+      const parsed = new Date(pubDateString);
+      if (!isNaN(parsed)) {
+        isoDate = parsed.toISOString();
+      }
+    }
 
-    console.log(`[INFO] [${index + 1}/${feed.items.length}] Creating page in Notion for "${title}"`);
+    console.log(
+      `[INFO] [${index + 1}/${
+        feed.items.length
+      }] Creating page in Notion for "${title}"`
+    );
     try {
       await notion.pages.create({
         parent: { database_id: READER_DB_ID },
@@ -59,22 +77,24 @@ async function fetchAndStoreFeedArticles(feedUrl) {
           Title: {
             title: [
               {
-                text: { content: title }
-              }
-            ]
+                text: { content: title },
+              },
+            ],
           },
           Link: {
             // 「URL」型プロパティの場合
-            url: link
+            url: link,
           },
           PublishedAt: {
             date: {
-              start: pubDate
-            }
-          }
-        }
+              start: isoDate
+            },
+          },
+        },
       });
-      console.log(`[INFO] [${index + 1}/${feed.items.length}] => Stored: "${title}"`);
+      console.log(
+        `[INFO] [${index + 1}/${feed.items.length}] => Stored: "${title}"`
+      );
     } catch (error) {
       console.error(
         `[ERROR] Failed to create page in Notion for "${title}". Skipped.`,
@@ -85,7 +105,7 @@ async function fetchAndStoreFeedArticles(feedUrl) {
 }
 
 async function main() {
-  console.log('[INFO] === Start main() ===');
+  console.log("[INFO] === Start main() ===");
   console.log(`[INFO] FEEDER_DB_ID: ${FEEDER_DB_ID}`);
   console.log(`[INFO] READER_DB_ID: ${READER_DB_ID}`);
 
@@ -101,7 +121,7 @@ async function main() {
   try {
     const feedUrls = await getFeedUrls();
     if (!feedUrls || feedUrls.length === 0) {
-      console.log('[WARN] No feed URLs found. Exiting...');
+      console.log("[WARN] No feed URLs found. Exiting...");
       return;
     }
 
@@ -109,9 +129,9 @@ async function main() {
       await fetchAndStoreFeedArticles(feedUrl);
     }
 
-    console.log('[INFO] Done!');
+    console.log("[INFO] Done!");
   } catch (error) {
-    console.error('[ERROR] main() encountered an error:', error);
+    console.error("[ERROR] main() encountered an error:", error);
     process.exit(1);
   }
 }
