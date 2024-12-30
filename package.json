@@ -1,0 +1,12 @@
+{
+    "name": "my-rss-notion",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+      "start": "node index.js"
+    },
+    "dependencies": {
+      "@notionhq/client": "^2.2.6",
+      "rss-parser": "^3.12.0"
+    }
+  }

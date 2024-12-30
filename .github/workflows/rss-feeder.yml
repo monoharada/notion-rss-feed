@@ -1,0 +1,28 @@
+name: RSS to Notion
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # 毎時0分に実行 (UTC)
+  workflow_dispatch:     # 手動でのトリガーも有効化
+
+jobs:
+  rss-notion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Fetch RSS and update Notion
+        run: npm start
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          FEEDER_DB_ID: ${{ secrets.FEEDER_DB_ID }}
+          READER_DB_ID: ${{ secrets.READER_DB_ID }}
