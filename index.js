@@ -1,5 +1,5 @@
-import { Client } from '@notionhq/client';
-import Parser from 'rss-parser';
+import { Client } from "@notionhq/client";
+import Parser from "rss-parser";
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const FEEDER_DB_ID = process.env.FEEDER_DB_ID;
@@ -12,19 +12,21 @@ const parser = new Parser();
  * { feedUrl, keywords } の配列を返す
  */
 async function getFeeds() {
-  console.log('[INFO] Start getFeeds() ...');
+  console.log("[INFO] Start getFeeds() ...");
   try {
     const response = await notion.databases.query({
       database_id: FEEDER_DB_ID,
       filter: {
-        property: 'Enable',
+        property: "Enable",
         checkbox: {
           equals: true,
         },
       },
     });
 
-    console.log(`[INFO] getFeeds() response length: ${response.results.length}`);
+    console.log(
+      `[INFO] getFeeds() response length: ${response.results.length}`
+    );
 
     // ページごとに URL プロパティ(フィールド名 "URL")と keyword プロパティを取り出す
     const feeds = response.results.map((page) => {
@@ -45,10 +47,10 @@ async function getFeeds() {
     // feedUrl が無いページは除外
     const validFeeds = feeds.filter((f) => !!f.feedUrl);
 
-    console.log('[INFO] Valid feeds:', validFeeds);
+    console.log("[INFO] Valid feeds:", validFeeds);
     return validFeeds;
   } catch (error) {
-    console.error('[ERROR] Failed to get feeds:', error);
+    console.error("[ERROR] Failed to get feeds:", error);
     throw error;
   }
 }
@@ -70,15 +72,19 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
     return;
   }
 
-  console.log(`[INFO] Fetched feed: "${feed.title}". Total items: ${feed.items?.length ?? 0}`);
+  console.log(
+    `[INFO] Fetched feed: "${feed.title}". Total items: ${
+      feed.items?.length ?? 0
+    }`
+  );
 
   // 直近1週間の基準日
   const now = new Date();
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   for (const [index, item] of feed.items.entries()) {
-    const title = item.title ?? 'No Title';
-    const link = item.link ?? '';
+    const title = item.title ?? "No Title";
+    const link = item.link ?? "";
     const pubDateString = item.pubDate ?? null;
 
     // pubDate を ISO8601 形式に変換
@@ -87,7 +93,7 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
     if (pubDateString) {
       const parsed = new Date(pubDateString);
       if (!isNaN(parsed)) {
-        pubDate = parsed;             // JS Date オブジェクト
+        pubDate = parsed; // JS Date オブジェクト
         isoDate = parsed.toISOString(); // Notion へ登録する際の文字列
       }
     }
@@ -95,7 +101,11 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
     // 直近1週間以内かチェック
     // pubDate が取れない場合は対象外にするかどうか、運用次第で決めてください
     if (!pubDate || pubDate < oneWeekAgo) {
-      console.log(`[INFO] [${index + 1}/${feed.items.length}] "${title}" => older than 1 week => SKIP`);
+      console.log(
+        `[INFO] [${index + 1}/${
+          feed.items.length
+        }] "${title}" => older than 1 week => SKIP`
+      );
       continue;
     }
 
@@ -107,12 +117,30 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
     }
 
     if (!isMatch) {
-      console.log(`[INFO] [${index + 1}/${feed.items.length}] "${title}" => NO MATCH => SKIP`);
+      console.log(
+        `[INFO] [${index + 1}/${
+          feed.items.length
+        }] "${title}" => NO MATCH => SKIP`
+      );
       continue;
     }
 
+    // ▼▼▼ 重複チェックを追加 ▼▼▼
+    const duplicated = await isDuplicatedInReader(link);
+    if (duplicated) {
+      console.log(
+        `[INFO] [${index + 1}/${
+          feed.items.length
+        }] "${title}" => Already exists => SKIP`
+      );
+      continue;
+    }
     // ここまで来たものは登録
-    console.log(`[INFO] [${index + 1}/${feed.items.length}] Creating page in Notion for "${title}"`);
+    console.log(
+      `[INFO] [${index + 1}/${
+        feed.items.length
+      }] Creating page in Notion for "${title}"`
+    );
 
     try {
       await notion.pages.create({
@@ -135,9 +163,14 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
           },
         },
       });
-      console.log(`[INFO] [${index + 1}/${feed.items.length}] => Stored: "${title}"`);
+      console.log(
+        `[INFO] [${index + 1}/${feed.items.length}] => Stored: "${title}"`
+      );
     } catch (error) {
-      console.error(`[ERROR] Failed to create page in Notion for "${title}". Skipped.`, error);
+      console.error(
+        `[ERROR] Failed to create page in Notion for "${title}". Skipped.`,
+        error
+      );
     }
   }
 }
@@ -146,7 +179,7 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
  * メイン処理
  */
 async function main() {
-  console.log('[INFO] === Start main() ===');
+  console.log("[INFO] === Start main() ===");
   console.log(`[INFO] FEEDER_DB_ID: ${FEEDER_DB_ID}`);
   console.log(`[INFO] READER_DB_ID: ${READER_DB_ID}`);
 
@@ -163,7 +196,7 @@ async function main() {
     // 1. feeder DBから Enable=true のフィードを取得
     const feeds = await getFeeds();
     if (!feeds.length) {
-      console.log('[WARN] No feeds found (Enable=true). Exiting...');
+      console.log("[WARN] No feeds found (Enable=true). Exiting...");
       return;
     }
 
@@ -172,11 +205,39 @@ async function main() {
       await fetchAndStoreFeedArticles(feedInfo);
     }
 
-    console.log('[INFO] Done!');
+    console.log("[INFO] Done!");
   } catch (error) {
-    console.error('[ERROR] main() encountered an error:', error);
+    console.error("[ERROR] main() encountered an error:", error);
     process.exit(1);
   }
+}
+
+/**
+ * Notion の「reader」DB に、同じリンクのレコードが既に存在するかチェック
+ * @param {string} link - 記事のリンク
+ * @returns {boolean} - true: 重複あり, false: 重複なし
+ */
+async function isDuplicatedInReader(link) {
+  if (!link) {
+    // リンクが無い場合は一応 false として扱う（空文字記事はそもそもスキップでもOK）
+    return false;
+  }
+
+  // Notion の query で「Link」プロパティが `link` と一致するものを探す
+  // プロパティの型が "URL" の場合、 filter の書き方は↓のようになります。
+  // 参考: https://developers.notion.com/reference/post-database-query#url
+  const response = await notion.databases.query({
+    database_id: READER_DB_ID,
+    filter: {
+      property: "Link",
+      url: {
+        equals: link,
+      },
+    },
+  });
+
+  // 1件以上ヒットしたら重複とみなす
+  return response.results.length > 0;
 }
 
 // 実行
