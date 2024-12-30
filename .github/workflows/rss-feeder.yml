@@ -2,7 +2,7 @@ name: RSS to Notion
 
 on:
   schedule:
-    - cron: '0 * * * *'  # 毎時0分に実行 (UTC)
+    - cron: '0 0 * * 1'
   workflow_dispatch:     # 手動でのトリガーも有効化
 
 jobs:
