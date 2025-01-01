@@ -87,6 +87,9 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
     const link = item.link ?? "";
     const pubDateString = item.pubDate ?? null;
 
+    // たとえば RSS の description や content を取得
+    const description = item.contentSnippet || item.content || item.description || "";
+
     // pubDate を ISO8601 形式に変換
     let isoDate = null;
     let pubDate = null;
@@ -99,7 +102,6 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
     }
 
     // 直近1週間以内かチェック
-    // pubDate が取れない場合は対象外にするかどうか、運用次第で決めてください
     if (!pubDate || pubDate < oneWeekAgo) {
       console.log(
         `[INFO] [${index + 1}/${
@@ -160,6 +162,14 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
             date: {
               start: isoDate,
             },
+          },
+          // ▼▼▼ ここで description を格納 ▼▼▼
+          Description: {
+            rich_text: [
+              {
+                text: { content: description },
+              },
+            ],
           },
         },
       });
@@ -223,9 +233,6 @@ async function isDuplicatedInReader(link) {
     return false;
   }
 
-  // Notion の query で「Link」プロパティが `link` と一致するものを探す
-  // プロパティの型が "URL" の場合、 filter の書き方は↓のようになります。
-  // 参考: https://developers.notion.com/reference/post-database-query#url
   const response = await notion.databases.query({
     database_id: READER_DB_ID,
     filter: {
@@ -236,7 +243,6 @@ async function isDuplicatedInReader(link) {
     },
   });
 
-  // 1件以上ヒットしたら重複とみなす
   return response.results.length > 0;
 }
 
