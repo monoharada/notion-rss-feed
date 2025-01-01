@@ -30,12 +30,8 @@ async function getFeeds() {
 
     // ページごとに URL プロパティ(フィールド名 "URL")と keyword プロパティを取り出す
     const feeds = response.results.map((page) => {
-      // 「URL」は URL型プロパティを想定
-      const feedUrl = page.properties.URL?.url;
-
-      // 「keyword」はマルチセレクトを想定 (配列)
-      const multiSelect = page.properties.keyword?.multi_select ?? [];
-      // name だけ取り出したキーワード配列
+      const feedUrl = page.properties.URL?.url; // 「URL」は URL型
+      const multiSelect = page.properties.keyword?.multi_select ?? []; // 「keyword」はマルチセレクトを想定
       const keywords = multiSelect.map((x) => x.name);
 
       return {
@@ -95,6 +91,16 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
     const enclosureUrl = item.enclosure?.url ?? "";
     const enclosureType = item.enclosure?.type ?? "";
 
+    // ◆◆◆ description から <img> タグを正規表現で抽出 ◆◆◆
+    // （非常に単純な正規表現なので、必要に応じてカスタマイズしてください）
+    const imgRegex = /<img[^>]+src=["']([^"']+)["']/g;
+    const imagesInDescription = [];
+    let match;
+    while ((match = imgRegex.exec(description)) !== null) {
+      // match[1] が src の URL
+      imagesInDescription.push(match[1]);
+    }
+
     // pubDate を ISO8601 形式に変換
     let isoDate = null;
     let pubDate = null;
@@ -143,7 +149,7 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
       continue;
     }
 
-    // ここまで来たものは登録
+    // Notion 登録準備
     console.log(
       `[INFO] [${index + 1}/${
         feed.items.length
@@ -152,18 +158,29 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
 
     try {
       // enclosure が画像なら、Notion の Files & media プロパティで扱う
-      const ogpFiles =
-        enclosureUrl && enclosureType.startsWith("image")
-          ? [
-              {
-                type: "external",
-                name: "OGP Image", // 任意の名前
-                external: {
-                  url: enclosureUrl,
-                },
-              },
-            ]
-          : [];
+      const ogpFiles = [];
+
+      // enclosure 画像
+      if (enclosureUrl && enclosureType.startsWith("image")) {
+        ogpFiles.push({
+          type: "external",
+          name: "OGP Image (enclosure)",
+          external: {
+            url: enclosureUrl,
+          },
+        });
+      }
+
+      // description 内の画像
+      imagesInDescription.forEach((url, idx) => {
+        ogpFiles.push({
+          type: "external",
+          name: `OGP Image #${idx + 1} (description)`,
+          external: {
+            url,
+          },
+        });
+      });
 
       await notion.pages.create({
         parent: { database_id: READER_DB_ID },
@@ -190,7 +207,7 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
               },
             ],
           },
-          // OGP という Files & media プロパティへ画像を格納
+          // OGP という Files & media プロパティへ複数画像を格納
           ...(ogpFiles.length > 0 && {
             OGP: {
               files: ogpFiles,
