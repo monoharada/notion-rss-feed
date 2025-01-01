@@ -87,8 +87,13 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
     const link = item.link ?? "";
     const pubDateString = item.pubDate ?? null;
 
-    // たとえば RSS の description や content を取得
-    const description = item.contentSnippet || item.content || item.description || "";
+    // RSS の本文や概要
+    const description =
+      item.contentSnippet || item.content || item.description || "";
+
+    // enclosure 情報があれば取得 (RSS によっては無い場合もある)
+    const enclosureUrl = item.enclosure?.url ?? "";
+    const enclosureType = item.enclosure?.type ?? "";
 
     // pubDate を ISO8601 形式に変換
     let isoDate = null;
@@ -137,6 +142,7 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
       );
       continue;
     }
+
     // ここまで来たものは登録
     console.log(
       `[INFO] [${index + 1}/${
@@ -145,6 +151,20 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
     );
 
     try {
+      // enclosure が画像なら、Notion の Files & media プロパティで扱う
+      const ogpFiles =
+        enclosureUrl && enclosureType.startsWith("image")
+          ? [
+              {
+                type: "external",
+                name: "OGP Image", // 任意の名前
+                external: {
+                  url: enclosureUrl,
+                },
+              },
+            ]
+          : [];
+
       await notion.pages.create({
         parent: { database_id: READER_DB_ID },
         properties: {
@@ -163,7 +183,6 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
               start: isoDate,
             },
           },
-          // ▼▼▼ ここで description を格納 ▼▼▼
           Description: {
             rich_text: [
               {
@@ -171,6 +190,12 @@ async function fetchAndStoreFeedArticles({ feedUrl, keywords }) {
               },
             ],
           },
+          // OGP という Files & media プロパティへ画像を格納
+          ...(ogpFiles.length > 0 && {
+            OGP: {
+              files: ogpFiles,
+            },
+          }),
         },
       });
       console.log(
