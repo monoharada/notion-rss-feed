@@ -45,6 +45,22 @@ export async function getFeeds(notionClient, feederDbId) {
 }
 
 /**
+ * ISO週番号と週年を計算
+ * 年末年始で週番号と年が正しく対応するようにする
+ */
+function getISOWeekData(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return {
+    isoYear: d.getUTCFullYear(),
+    isoWeek: weekNo
+  };
+}
+
+/**
  * 直近1週間以内かどうか判定するヘルパー
  */
 function isWithinOneWeek(dateObj) {
@@ -206,9 +222,14 @@ export async function fetchAndStoreFeedArticles({
           PublishedAt: {
             date: { start: isoDate },
           },
-          Year: {
-            number: pubDate ? pubDate.getFullYear() : new Date().getFullYear(),
-          },
+          // ISO週番号を計算（年末年始で週と年が正しく対応）
+          ...(pubDate && (() => {
+            const { isoYear, isoWeek } = getISOWeekData(pubDate);
+            return {
+              Year: { number: isoYear },
+              Week: { number: isoWeek },
+            };
+          })()),
           Description: {
             rich_text: [{ text: { content: description } }],
           },

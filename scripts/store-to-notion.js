@@ -8,6 +8,22 @@ import fs from 'fs';
 import path from 'path';
 
 /**
+ * ISO週番号と週年を計算
+ * 年末年始で週番号と年が正しく対応するようにする
+ */
+function getISOWeekData(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return {
+    isoYear: d.getUTCFullYear(),
+    isoWeek: weekNo
+  };
+}
+
+/**
  * 記事をNotionに保存
  */
 async function storeArticleToNotion(notionClient, readerDbId, article) {
@@ -50,10 +66,14 @@ async function storeArticleToNotion(notionClient, readerDbId, article) {
     properties.PublishedAt = {
       date: { start: article.publishedAt },
     };
-    // PublishedAtから年を抽出してYearプロパティに設定
-    const year = new Date(article.publishedAt).getFullYear();
+    // ISO週番号を計算（年末年始で週と年が正しく対応）
+    const pubDate = new Date(article.publishedAt);
+    const { isoYear, isoWeek } = getISOWeekData(pubDate);
     properties.Year = {
-      number: year,
+      number: isoYear,
+    };
+    properties.Week = {
+      number: isoWeek,
     };
   }
 
