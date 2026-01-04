@@ -63,6 +63,11 @@ zenn.dev, javascript.plainenglish.io, coliss.com, medium.com, qiita.com
 3. **リスト記事**: "10 things every...", "top N tips", "N easy steps"
 4. **体験談**: "my journey", "how i learned", "私の経験"
 5. **カテゴリ間違い**: system design（design system以外）, backend, infrastructure, devops
+6. **CSSプリプロセッサ**: scss, sass, less, stylus, プリプロセッサ（※CSS Variablesは歓迎）
+7. **マイナーUIライブラリ**: Luna UI など「覇権を取らない」技術の紹介
+8. **HTML Mail**: html mail, html email, メールテンプレート, newsletter design
+9. **Claude Code体験談系**: バイブコーディング、vibe coding、「〇日でリリース」「〇週間で開発」、実践検証Day
+10. **技術デモ/遊び系**: 「CSSだけで〇〇」「JavaScriptゼロ」「〇〇を作ってみた」「〇〇を作った話」
 
 ## ドメイン + キーワード除外組み合わせ
 
@@ -114,5 +119,12 @@ zenn.dev, javascript.plainenglish.io, coliss.com, medium.com, qiita.com
 - **迷ったら保留（40-69）**: 確信がない場合は保留にして出力に含める
 - **過度な除外を避ける**: 「良記事を逃さない」ことも重要
 - 各記事の `ai_reason` は日本語で簡潔に記載
+- **CSS Variables vs SCSS**: CSS Variables（CSS Custom Properties）は歓迎、SCSS/Sassは除外
+- **「覇権を取るか」基準**: 業界標準になる可能性がない技術は除外（採用する価値がない）
+- **主流フレームワーク**: React, Vue, Svelte, Angularの先進的な使い方は歓迎
+- **HTML Mail**: メールテンプレート関連は除外（モダンWeb開発とは異なる領域）
+- **テンプレート配布系**: 再利用可能な成果物（テンプレート、設定ファイル等）の配布は歓迎
+- **組織導入・推進**: アクセシビリティなどの組織への導入方法・推進戦略は高評価
+- **Claude Code体験談**: 「〇日で作った」「バイブコーディング」等の体験談は除外（成果物なし）
 
 それでは、`articles.json` を読み込んでフィルタリングを実行してください。
