@@ -50,6 +50,11 @@ async function storeArticleToNotion(notionClient, readerDbId, article) {
     properties.PublishedAt = {
       date: { start: article.publishedAt },
     };
+    // PublishedAtから年を抽出してYearプロパティに設定
+    const year = new Date(article.publishedAt).getFullYear();
+    properties.Year = {
+      number: year,
+    };
   }
 
   // AI審査日時

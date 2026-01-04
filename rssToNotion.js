@@ -206,6 +206,9 @@ export async function fetchAndStoreFeedArticles({
           PublishedAt: {
             date: { start: isoDate },
           },
+          Year: {
+            number: pubDate ? pubDate.getFullYear() : new Date().getFullYear(),
+          },
           Description: {
             rich_text: [{ text: { content: description } }],
           },
