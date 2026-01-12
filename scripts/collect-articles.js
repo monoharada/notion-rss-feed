@@ -7,45 +7,15 @@
 import { createNotionClient } from '../notionClient.js';
 import { createRssParser } from '../rssParser.js';
 import { getFeeds, isDuplicatedInReader } from '../rssToNotion.js';
+import {
+  isWithinOneWeek,
+  extractImageUrlsFromDescription,
+  extractDomain,
+  validateEnvVars,
+  runMain,
+} from '../utils.js';
 import fs from 'fs';
 import path from 'path';
-
-const ONE_WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
-
-/**
- * 直近1週間以内かどうか判定
- */
-function isWithinOneWeek(dateObj) {
-  if (!dateObj) return false;
-  const now = new Date();
-  const oneWeekAgo = new Date(now.getTime() - ONE_WEEK_IN_MS);
-  return dateObj >= oneWeekAgo;
-}
-
-/**
- * description から <img src="..."> を抽出
- */
-function extractImageUrlsFromDescription(description) {
-  const imgRegex = /<img[^>]+src=["']([^"']+)["']/g;
-  const results = [];
-  let match;
-  while ((match = imgRegex.exec(description)) !== null) {
-    results.push(match[1]);
-  }
-  return results;
-}
-
-/**
- * URLからドメインを抽出
- */
-function extractDomain(url) {
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname;
-  } catch {
-    return '';
-  }
-}
 
 /**
  * 単一フィードから記事を収集
@@ -150,21 +120,17 @@ async function collectArticlesFromFeed({
 async function main() {
   console.log('[INFO] === RSS Article Collection Started ===');
 
-  // 環境変数チェック
-  const notionToken = process.env.NOTION_TOKEN;
-  const feederDbId = process.env.FEEDER_DB_ID;
-  const readerDbId = process.env.READER_DB_ID;
+  const { NOTION_TOKEN, FEEDER_DB_ID, READER_DB_ID } = validateEnvVars([
+    'NOTION_TOKEN',
+    'FEEDER_DB_ID',
+    'READER_DB_ID',
+  ]);
 
-  if (!notionToken || !feederDbId || !readerDbId) {
-    console.error('[ERROR] Missing environment variables: NOTION_TOKEN, FEEDER_DB_ID, READER_DB_ID');
-    process.exit(1);
-  }
-
-  const notionClient = createNotionClient(notionToken);
+  const notionClient = createNotionClient(NOTION_TOKEN);
   const parser = createRssParser();
 
   // フィード一覧を取得
-  const feeds = await getFeeds(notionClient, feederDbId);
+  const feeds = await getFeeds(notionClient, FEEDER_DB_ID);
   console.log(`[INFO] Found ${feeds.length} enabled feeds`);
 
   // 全フィードから記事を収集
@@ -175,7 +141,7 @@ async function main() {
       parser,
       feedUrl: feed.feedUrl,
       keywords: feed.keywords,
-      readerDbId,
+      readerDbId: READER_DB_ID,
     });
     allArticles.push(...articles);
   }
@@ -190,7 +156,4 @@ async function main() {
   console.log('[INFO] === RSS Article Collection Completed ===');
 }
 
-main().catch((error) => {
-  console.error('[FATAL]', error);
-  process.exit(1);
-});
+runMain(main);

@@ -4,24 +4,9 @@
  */
 
 import { createNotionClient } from '../notionClient.js';
+import { getISOWeekData, validateEnvVars, runMain } from '../utils.js';
 import fs from 'fs';
 import path from 'path';
-
-/**
- * ISO週番号と週年を計算
- * 年末年始で週番号と年が正しく対応するようにする
- */
-function getISOWeekData(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-  return {
-    isoYear: d.getUTCFullYear(),
-    isoWeek: weekNo
-  };
-}
 
 /**
  * 記事をNotionに保存
@@ -99,16 +84,8 @@ async function storeArticleToNotion(notionClient, readerDbId, article) {
 async function main() {
   console.log('[INFO] === Store Filtered Articles to Notion ===');
 
-  // 環境変数チェック
-  const notionToken = process.env.NOTION_TOKEN;
-  const readerDbId = process.env.READER_DB_ID;
-
-  if (!notionToken || !readerDbId) {
-    console.error('[ERROR] Missing environment variables: NOTION_TOKEN, READER_DB_ID');
-    process.exit(1);
-  }
-
-  const notionClient = createNotionClient(notionToken);
+  const { NOTION_TOKEN, READER_DB_ID } = validateEnvVars(['NOTION_TOKEN', 'READER_DB_ID']);
+  const notionClient = createNotionClient(NOTION_TOKEN);
 
   // filtered-articles.json を読み込み
   const inputPath = path.resolve(process.cwd(), 'filtered-articles.json');
@@ -130,7 +107,7 @@ async function main() {
   for (const [index, article] of articles.entries()) {
     try {
       console.log(`[INFO] [${index + 1}/${articles.length}] Storing: "${article.title}"`);
-      await storeArticleToNotion(notionClient, readerDbId, article);
+      await storeArticleToNotion(notionClient, READER_DB_ID, article);
       successCount++;
     } catch (error) {
       console.error(`[ERROR] Failed to store "${article.title}":`, error.message);
@@ -142,7 +119,4 @@ async function main() {
   console.log(`[INFO] Success: ${successCount}, Errors: ${errorCount}`);
 }
 
-main().catch((error) => {
-  console.error('[FATAL]', error);
-  process.exit(1);
-});
+runMain(main);

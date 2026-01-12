@@ -4,6 +4,7 @@
  */
 
 import { createNotionClient } from '../notionClient.js';
+import { validateEnvVars, runMain } from '../utils.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -37,13 +38,8 @@ async function updatePageReview(notionClient, pageId, result) {
 async function main() {
   console.log('[INFO] === Update Review Results to Notion ===');
 
-  const notionToken = process.env.NOTION_TOKEN;
-  if (!notionToken) {
-    console.error('[ERROR] Missing NOTION_TOKEN environment variable');
-    process.exit(1);
-  }
-
-  const notionClient = createNotionClient(notionToken);
+  const { NOTION_TOKEN } = validateEnvVars(['NOTION_TOKEN']);
+  const notionClient = createNotionClient(NOTION_TOKEN);
 
   // 引数からファイルパスを取得、またはデフォルト
   const inputFile = process.argv[2] || 'review-results-2026-01-05.json';
@@ -80,7 +76,4 @@ async function main() {
   console.log(`[INFO] Summary: 推奨=${summary.推奨}, 保留=${summary.保留}, 除外=${summary.除外}`);
 }
 
-main().catch((error) => {
-  console.error('[FATAL]', error);
-  process.exit(1);
-});
+runMain(main);

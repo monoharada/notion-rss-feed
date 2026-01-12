@@ -4,29 +4,22 @@
  * 良い記事の傾向を抽出する
  */
 
-import "dotenv/config";
-import { Client } from "@notionhq/client";
+import 'dotenv/config';
+import { createNotionClient } from '../notionClient.js';
+import { extractDomain, validateEnvVars, runMain } from '../utils.js';
 
-const NOTION_TOKEN = process.env.NOTION_TOKEN;
-const READER_DB_ID = process.env.READER_DB_ID || "16cf2d42d679810f8b7dd16382d5b9b0";
-
-if (!NOTION_TOKEN) {
-  console.error("[ERROR] NOTION_TOKEN is not set");
-  process.exit(1);
-}
-
-const notion = new Client({ auth: NOTION_TOKEN });
+const DEFAULT_READER_DB_ID = '16cf2d42d679810f8b7dd16382d5b9b0';
 
 /**
  * データベースから記事を取得
  */
-async function fetchArticles(filter = null) {
+async function fetchArticles(notionClient, readerDbId, filter = null) {
   const results = [];
   let cursor = undefined;
 
   do {
     const queryParams = {
-      database_id: READER_DB_ID,
+      database_id: readerDbId,
       start_cursor: cursor,
       page_size: 100,
     };
@@ -36,7 +29,7 @@ async function fetchArticles(filter = null) {
       queryParams.filter = filter;
     }
 
-    const response = await notion.databases.query(queryParams);
+    const response = await notionClient.databases.query(queryParams);
 
     results.push(...response.results);
     cursor = response.has_more ? response.next_cursor : undefined;
@@ -51,26 +44,18 @@ async function fetchArticles(filter = null) {
 function extractPageData(page) {
   const props = page.properties;
 
-  const title = props.Title?.title?.[0]?.plain_text || "";
-  const link = props.Link?.url || "";
-  const description = props.Description?.rich_text?.[0]?.plain_text || "";
-  const publishedAt = props.PublishedAt?.date?.start || "";
-  const isInteresting = props["興味"]?.checkbox || false;
-  const isMustRead = props["必読"]?.checkbox || false;
+  const title = props.Title?.title?.[0]?.plain_text || '';
+  const link = props.Link?.url || '';
+  const description = props.Description?.rich_text?.[0]?.plain_text || '';
+  const publishedAt = props.PublishedAt?.date?.start || '';
+  const isInteresting = props['興味']?.checkbox || false;
+  const isMustRead = props['必読']?.checkbox || false;
   const isRead = props.Read?.checkbox || false;
-
-  // URLからドメインを抽出
-  let domain = "";
-  try {
-    domain = new URL(link).hostname;
-  } catch (e) {
-    domain = "";
-  }
 
   return {
     title,
     link,
-    domain,
+    domain: extractDomain(link),
     description,
     publishedAt,
     isInteresting,
@@ -147,33 +132,39 @@ function analyzeArticles(articles) {
  * メイン処理
  */
 async function main() {
-  console.log("[INFO] Starting article analysis...");
-  console.log(`[INFO] Database ID: ${READER_DB_ID}`);
+  console.log('[INFO] Starting article analysis...');
+
+  const { NOTION_TOKEN } = validateEnvVars(['NOTION_TOKEN']);
+  const readerDbId = process.env.READER_DB_ID || DEFAULT_READER_DB_ID;
+
+  console.log(`[INFO] Database ID: ${readerDbId}`);
+
+  const notionClient = createNotionClient(NOTION_TOKEN);
 
   // 1. 「興味」または「必読」がtrueの記事を取得
-  console.log("\n[INFO] Fetching articles with 興味=true OR 必読=true...");
-  const goodArticles = await fetchArticles({
+  console.log('\n[INFO] Fetching articles with 興味=true OR 必読=true...');
+  const goodArticles = await fetchArticles(notionClient, readerDbId, {
     or: [
-      { property: "興味", checkbox: { equals: true } },
-      { property: "必読", checkbox: { equals: true } },
+      { property: '興味', checkbox: { equals: true } },
+      { property: '必読', checkbox: { equals: true } },
     ],
   });
   console.log(`[INFO] Found ${goodArticles.length} good articles`);
 
   // 2. 読了済みで評価されていない記事を取得（除外候補の分析用）
-  console.log("\n[INFO] Fetching read articles without 興味/必読...");
-  const neutralArticles = await fetchArticles({
+  console.log('\n[INFO] Fetching read articles without 興味/必読...');
+  const neutralArticles = await fetchArticles(notionClient, readerDbId, {
     and: [
-      { property: "Read", checkbox: { equals: true } },
-      { property: "興味", checkbox: { equals: false } },
-      { property: "必読", checkbox: { equals: false } },
+      { property: 'Read', checkbox: { equals: true } },
+      { property: '興味', checkbox: { equals: false } },
+      { property: '必読', checkbox: { equals: false } },
     ],
   });
   console.log(`[INFO] Found ${neutralArticles.length} neutral/rejected articles`);
 
   // 3. 全記事を取得
-  console.log("\n[INFO] Fetching all articles...");
-  const allArticles = await fetchArticles({});
+  console.log('\n[INFO] Fetching all articles...');
+  const allArticles = await fetchArticles(notionClient, readerDbId, {});
   console.log(`[INFO] Found ${allArticles.length} total articles`);
 
   // データ抽出
@@ -217,7 +208,7 @@ async function main() {
     },
   };
 
-  console.log("\n=== ANALYSIS REPORT ===");
+  console.log('\n=== ANALYSIS REPORT ===');
   console.log(JSON.stringify(report, null, 2));
 
   return report;
@@ -235,13 +226,10 @@ function calculateDomainRatio(goodDomains, allDomains) {
       domain,
       goodCount: count,
       totalCount,
-      ratio: (ratio * 100).toFixed(1) + "%",
+      ratio: (ratio * 100).toFixed(1) + '%',
     });
   }
   return ratios.sort((a, b) => b.goodCount - a.goodCount).slice(0, 20);
 }
 
-main().catch((error) => {
-  console.error("[ERROR]", error);
-  process.exit(1);
-});
+runMain(main);
