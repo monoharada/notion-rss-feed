@@ -1,0 +1,13 @@
+[
+  {"id": "2def2d42-d679-81f2-9ebb-f7d4c8fa3b9f", "title": "【個人開発】パソコン作業の姿勢をAIでチェック🦩 姿勢のフラミンゴ先生【姿勢検出】", "domain": "zenn.dev", "status": "除外", "score": 20, "reason": "[除外] 個人開発アプリ紹介。対象領域外（AI活用アプリ）。"},
+  {"id": "2def2d42-d679-81f3-a475-e38132467f04", "title": "2025 年を振り返る", "domain": "blog.jxck.io", "status": "推奨", "score": 70, "reason": "[推奨] blog.jxck.ioはTier 3だがWeb標準の権威。年間まとめ記事で有益な情報が含まれる。"},
+  {"id": "2def2d42-d679-81f3-b3be-eddb53358ff6", "title": "Safari Web Developers Rejoice: I Ported the 'Pesticide' CSS Debugger (And It's Free)", "domain": "medium.com", "status": "保留", "score": 45, "reason": "[保留] CSS開発ツールに関する記事。Safari向けデバッグツールは実用的。"},
+  {"id": "2def2d42-d679-81f4-8c3d-e7421d509f9e", "title": "When You're Stuck at 320 Characters in CSSBattle — and the Best Solutions Are 160", "domain": "medium.com", "status": "除外", "score": 20, "reason": "[除外] CSSBattleゲームに関する記事。対象領域外（遊び系）。"},
+  {"id": "2def2d42-d679-81f5-b6b0-eb3d8edf7e79", "title": "How We Cut £90,000 a Year by Rebuilding Performance Management in Airtable", "domain": "medium.com", "status": "除外", "score": 25, "reason": "[除外] Airtable活用事例。対象領域外（ノーコードツール）。"},
+  {"id": "2def2d42-d679-81f6-83c4-c330593b3ebc", "title": "Google Fonts の日本語フォント、いつの間に増えた？（2025年末の現状）", "domain": "zenn.dev", "status": "保留", "score": 50, "reason": "[保留] Webフォントに関する情報。実務で役立つ可能性あり。"},
+  {"id": "2def2d42-d679-81f6-b2d0-de2b4d394409", "title": "AndroidゲームをUnityで作るチュートリアル ~ AIサポートのおかげ~", "domain": "zenn.dev", "status": "除外", "score": 20, "reason": "[除外] Unityチュートリアル。対象領域外（ゲーム開発）。"},
+  {"id": "2def2d42-d679-81f6-bb01-dc0c449dc2a2", "title": "LLMプロンプト内の空白・改行に対するトークン数と処理時間の計測", "domain": "zenn.dev", "status": "除外", "score": 30, "reason": "[除外] LLMトークン計測実験。対象領域外（AI/LLM）。"},
+  {"id": "2def2d42-d679-81f7-a674-cf8d95766493", "title": "HTML da Accessibility", "domain": "medium.com", "status": "除外", "score": 0, "reason": "[除外] 対象言語外（ウズベク語）。"},
+  {"id": "2def2d42-d679-81fd-b482-f47170bd8ce9", "title": "Web の維持への寄付", "domain": "blog.jxck.io", "status": "推奨", "score": 70, "reason": "[推奨] blog.jxck.ioはWeb標準の権威。Webエコシステムへの貢献に関する重要な記事。"},
+  {"id": "2def2d42-d679-81fe-808e-fb347ae2a1b3", "title": "Dev Container内のClaude CodeからホストOSに通知を送るVS Code拡張を作った", "domain": "zenn.dev", "status": "除外", "score": 30, "reason": "[除外] Claude Code関連のツール作成記事。AIツール利用に関する記事は除外対象。"}
+]

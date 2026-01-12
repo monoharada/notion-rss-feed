@@ -3,9 +3,12 @@
  * RSS フィード取得 & Notion への保存ロジックをまとめたモジュール。
  * テスト時にモックやスタブを注入しやすいように設計。
  */
- 
-// 一般的には 'dayjs' などのライブラリを使うと柔軟ですが、今回は自作しています
-const ONE_WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
+
+import {
+  getISOWeekData,
+  isWithinOneWeek,
+  extractImageUrlsFromDescription,
+} from './utils.js';
 
 /**
  * feeder データベースから "Enable" が true のフィードを取得し、
@@ -44,28 +47,6 @@ export async function getFeeds(notionClient, feederDbId) {
   }
 }
 
-/**
- * 直近1週間以内かどうか判定するヘルパー
- */
-function isWithinOneWeek(dateObj) {
-  if (!dateObj) return false;
-  const now = new Date();
-  const oneWeekAgo = new Date(now.getTime() - ONE_WEEK_IN_MS);
-  return dateObj >= oneWeekAgo;
-}
-
-/**
- * description から <img src="..."> を抽出するヘルパー
- */
-function extractImageUrlsFromDescription(description) {
-  const imgRegex = /<img[^>]+src=["']([^"']+)["']/g;
-  const results = [];
-  let match;
-  while ((match = imgRegex.exec(description)) !== null) {
-    results.push(match[1]);
-  }
-  return results;
-}
 
 /**
  * リンク重複チェック
@@ -206,6 +187,14 @@ export async function fetchAndStoreFeedArticles({
           PublishedAt: {
             date: { start: isoDate },
           },
+          // ISO週番号を計算（年末年始で週と年が正しく対応）
+          ...(pubDate && (() => {
+            const { isoYear, isoWeek } = getISOWeekData(pubDate);
+            return {
+              Year: { number: isoYear },
+              Week: { number: isoWeek },
+            };
+          })()),
           Description: {
             rich_text: [{ text: { content: description } }],
           },

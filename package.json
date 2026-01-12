@@ -3,10 +3,13 @@
     "version": "1.0.0",
     "type": "module",
     "scripts": {
-      "start": "node index.js"
+        "start": "node index.js",
+        "collect": "node scripts/collect-articles.js",
+        "store": "node scripts/store-to-notion.js"
     },
     "dependencies": {
-      "@notionhq/client": "^2.2.6",
-      "rss-parser": "^3.12.0"
+        "@notionhq/client": "^2.2.6",
+        "dotenv": "^17.2.3",
+        "rss-parser": "^3.12.0"
     }
-  }
+}

@@ -20,9 +20,66 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Fetch RSS and update Notion
-        run: npm start
+      # Step 1: RSS記事を収集してJSON出力
+      - name: Collect RSS articles
+        run: node scripts/collect-articles.js
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           FEEDER_DB_ID: ${{ secrets.FEEDER_DB_ID }}
           READER_DB_ID: ${{ secrets.READER_DB_ID }}
+
+      # 収集した記事がなければ終了
+      - name: Check if articles exist
+        id: check_articles
+        run: |
+          if [ ! -f articles.json ] || [ "$(cat articles.json)" = "[]" ]; then
+            echo "has_articles=false" >> $GITHUB_OUTPUT
+            echo "No articles to filter"
+          else
+            echo "has_articles=true" >> $GITHUB_OUTPUT
+            echo "Articles found: $(cat articles.json | jq length)"
+          fi
+
+      # Step 2: Claude でフィルタリング（GitHub App経由で認証）
+      - name: Filter articles with Claude
+        if: steps.check_articles.outputs.has_articles == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          prompt: |
+            以下のタスクを実行してください：
+
+            1. articles.json を読み込む
+            2. scripts/filter-prompt.md のガイドラインに従って各記事を評価
+            3. スコア40以上（推奨+保留）の記事のみを選別
+            4. 各記事に ai_status, ai_score, ai_reason を付与
+            5. filtered-articles.json に出力
+
+            重要: 必ず filtered-articles.json ファイルを作成してください。
+          allowed_tools: |
+            Read
+            Write
+            Glob
+
+      # Step 3: フィルタ済み記事をNotionに保存
+      - name: Store filtered articles to Notion
+        if: steps.check_articles.outputs.has_articles == 'true'
+        run: node scripts/store-to-notion.js
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          READER_DB_ID: ${{ secrets.READER_DB_ID }}
+
+      # サマリー表示
+      - name: Show summary
+        if: always()
+        run: |
+          echo "=== RSS to Notion Summary ==="
+          if [ -f articles.json ]; then
+            echo "Collected articles: $(cat articles.json | jq length)"
+          else
+            echo "Collected articles: 0"
+          fi
+          if [ -f filtered-articles.json ]; then
+            echo "Filtered articles (score >= 40): $(cat filtered-articles.json | jq length)"
+          else
+            echo "Filtered articles: 0"
+          fi
