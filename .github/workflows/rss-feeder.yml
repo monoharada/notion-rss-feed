@@ -45,6 +45,7 @@ jobs:
         if: steps.check_articles.outputs.has_articles == 'true'
         uses: anthropics/claude-code-action@v1
         with:
+          github_token: ${{ github.token }}
           prompt: |
             以下のタスクを実行してください：
 
@@ -55,10 +56,6 @@ jobs:
             5. filtered-articles.json に出力
 
             重要: 必ず filtered-articles.json ファイルを作成してください。
-          allowed_tools: |
-            Read
-            Write
-            Glob
 
       # Step 3: フィルタ済み記事をNotionに保存
       - name: Store filtered articles to Notion

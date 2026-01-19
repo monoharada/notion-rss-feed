@@ -24,6 +24,10 @@ export READER_DB_ID=<reader-database-id>
 
 # Note: GitHub Actions では Claude GitHub App 経由で認証
 # /install-github-app コマンドで事前にインストール済み
+#
+# Workflow tips:
+# - `anthropics/claude-code-action@v1` で OIDC エラーが出る場合は、step の `with.github_token: ${{ github.token }}` を指定する（または `permissions: id-token: write` を追加）。
+# - `allowed_tools` は v1 の入力ではないため、必要なら `claude_args` 側で制御する。
 ```
 
 ## Architecture
