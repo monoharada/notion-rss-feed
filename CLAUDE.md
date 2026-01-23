@@ -28,6 +28,7 @@ export READER_DB_ID=<reader-database-id>
 # Workflow tips:
 # - `anthropics/claude-code-action@v1` で OIDC エラーが出る場合は、step の `with.github_token: ${{ github.token }}` を指定する（または `permissions: id-token: write` を追加）。
 # - `allowed_tools` は v1 の入力ではないため、必要なら `claude_args` 側で制御する。
+# - Claude 実行には `ANTHROPIC_API_KEY` もしくは `CLAUDE_CODE_OAUTH_TOKEN` が必要（Secrets に設定し、workflow から入力に渡す）。
 ```
 
 ## Architecture
