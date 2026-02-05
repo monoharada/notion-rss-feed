@@ -4,7 +4,7 @@
 
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 export const ONE_WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
 

@@ -5,6 +5,8 @@
     "scripts": {
         "start": "node index.js",
         "collect": "node scripts/collect-articles.js",
+        "filter:local": "node scripts/filter-articles-local.js",
+        "run:local": "node scripts/collect-articles.js && node scripts/filter-articles-local.js && node scripts/store-to-notion.js",
         "store": "node scripts/store-to-notion.js"
     },
     "dependencies": {
