@@ -52,7 +52,8 @@ jobs:
           allowed_bots: github-actions
           claude_args: |
             --allowedTools Read,Glob
-            --json-schema '{"type":"object","properties":{"filtered_articles":{"type":"array","items":{"type":"object","properties":{"title":{"type":"string"},"link":{"type":"string"},"ai_status":{"type":"string"},"ai_score":{"type":"number"},"ai_reason":{"type":"string"}},"required":["link","ai_status","ai_score","ai_reason"],"additionalProperties":false}}},"required":["filtered_articles"],"additionalProperties":false}'
+            --max-turns 60
+            --json-schema '{"type":"object","properties":{"filtered_articles":{"type":"array","items":{"type":"object","properties":{"title":{"type":"string"},"link":{"type":"string"},"ai_status":{"type":"string"},"ai_score":{"type":"number"},"ai_reason":{"type":"string"},"publishedAt":{"type":"string"},"description":{"type":"string"},"domain":{"type":"string"},"ogpImages":{"type":"array","items":{"type":"string"}}},"required":["link","ai_status","ai_score","ai_reason"]}}},"required":["filtered_articles"]}'
           prompt: |
             以下のタスクを実行してください：
 
@@ -66,6 +67,7 @@ jobs:
             - ファイル書き込みはしないでください（filtered-articles.json は後続ステップで作ります）。
             - 対象が0件の場合でも、filtered_articles は必ず空配列 [] を返してください。
             - 出力は必ず JSON スキーマに準拠させてください。
+            - 出力は最小限にしてください（推奨: title/link/ai_* のみ。publishedAt/description/domain/ogpImages は省略してOK）。
 
             出力形式（必須）:
             {
