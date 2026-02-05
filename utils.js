@@ -2,6 +2,10 @@
  * Shared utility functions for RSS to Notion processing.
  */
 
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 export const ONE_WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
