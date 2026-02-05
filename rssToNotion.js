@@ -30,7 +30,11 @@ export async function getFeeds(notionClient, feederDbId) {
             },
           },
         }),
-      { label: 'Notion: getFeeds(databases.query)', shouldRetry: isRetryableNotionError }
+      {
+        label: 'Notion: getFeeds(databases.query)',
+        shouldRetry: isRetryableNotionError,
+        maxAttempts: 12,
+      }
     );
 
     console.log(`[INFO] getFeeds() response length: ${response.results.length}`);
@@ -70,7 +74,11 @@ export async function isDuplicatedInReader(notionClient, readerDbId, link) {
           },
         },
       }),
-    { label: 'Notion: isDuplicatedInReader(databases.query)', shouldRetry: isRetryableNotionError }
+    {
+      label: 'Notion: isDuplicatedInReader(databases.query)',
+      shouldRetry: isRetryableNotionError,
+      maxAttempts: 6,
+    }
   );
   return response.results.length > 0;
 }

@@ -78,7 +78,11 @@ async function storeArticleToNotion(notionClient, readerDbId, article) {
         parent: { database_id: readerDbId },
         properties,
       }),
-    { label: 'Notion: pages.create', shouldRetry: isRetryableNotionError }
+    {
+      label: 'Notion: pages.create',
+      shouldRetry: isRetryableNotionError,
+      maxAttempts: 6,
+    }
   );
 }
 
