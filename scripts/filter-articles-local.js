@@ -5,7 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { runMain } from '../utils.js';
+import { getEnvInt, runMain } from '../utils.js';
 
 const DOMAIN_TIERS = {
   40: new Set(['ishadeed.com', 'adrianroselli.com', 'webkit.org']),
@@ -141,9 +141,10 @@ function computeScore(article) {
   }
 
   // 軽い減点（ガイド/チュートリアル寄り）
-  if (matchesAny(haystack, ['guide', 'tutorial', 'introduction'])) {
-    score -= 15;
-    reasons.push('tutorial-ish -15');
+  const tutorialPenalty = getEnvInt('FILTER_TUTORIAL_PENALTY', 15);
+  if (tutorialPenalty > 0 && matchesAny(haystack, ['guide', 'tutorial', 'introduction'])) {
+    score -= tutorialPenalty;
+    reasons.push(`tutorial-ish -${tutorialPenalty}`);
   }
 
   return { score: Math.max(0, score), reasons };
@@ -154,6 +155,10 @@ async function main() {
 
   const inputPath = path.resolve(process.cwd(), 'articles.json');
   const outputPath = path.resolve(process.cwd(), 'filtered-articles.json');
+
+  const minScore = getEnvInt('FILTER_MIN_SCORE', 40);
+  const recommendedScore = getEnvInt('FILTER_RECOMMENDED_SCORE', 70);
+  console.log(`[INFO] Filter thresholds: min=${minScore}, recommended=${recommendedScore}`);
 
   if (!fs.existsSync(inputPath)) {
     console.log('[WARN] articles.json not found. Writing empty filtered-articles.json');
@@ -167,13 +172,26 @@ async function main() {
   }
 
   const filtered = [];
+  const scoreBuckets = { low: 0, mid: 0, high: 0 };
+  let scoredCount = 0;
+  let scoreSum = 0;
+  let scoreMin = Infinity;
+  let scoreMax = -Infinity;
 
   for (const a of articles) {
     if (!a || typeof a !== 'object') continue;
     const { score, reasons } = computeScore(a);
-    if (score < 40) continue;
+    scoredCount++;
+    scoreSum += score;
+    scoreMin = Math.min(scoreMin, score);
+    scoreMax = Math.max(scoreMax, score);
+    if (score < minScore) scoreBuckets.low++;
+    else if (score < recommendedScore) scoreBuckets.mid++;
+    else scoreBuckets.high++;
 
-    const ai_status = score >= 70 ? '推奨' : '保留';
+    if (score < minScore) continue;
+
+    const ai_status = score >= recommendedScore ? '推奨' : '保留';
     const ai_reason = `[${ai_status}] (heuristic) score=${score}; ${reasons.join(', ')}`.slice(0, 2000);
 
     filtered.push({
@@ -186,8 +204,14 @@ async function main() {
 
   fs.writeFileSync(outputPath, JSON.stringify(filtered, null, 2) + '\n', 'utf-8');
   console.log(`[INFO] Saved ${filtered.length} filtered articles to ${outputPath}`);
+  if (scoredCount > 0) {
+    const avg = (scoreSum / scoredCount).toFixed(1);
+    console.log(
+      `[INFO] Score stats: count=${scoredCount}, min=${Number.isFinite(scoreMin) ? scoreMin : 0}, max=${Number.isFinite(scoreMax) ? scoreMax : 0}, avg=${avg}`
+    );
+    console.log(`[INFO] Score buckets: <${minScore}=${scoreBuckets.low}, ${minScore}-${recommendedScore - 1}=${scoreBuckets.mid}, >=${recommendedScore}=${scoreBuckets.high}`);
+  }
   console.log('[INFO] === Local Filter Completed ===');
 }
 
 runMain(main);
-
