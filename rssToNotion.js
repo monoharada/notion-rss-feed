@@ -8,6 +8,8 @@ import {
   getISOWeekData,
   isWithinOneWeek,
   extractImageUrlsFromDescription,
+  isRetryableNotionError,
+  retryAsync,
 } from './utils.js';
 
 /**
@@ -17,15 +19,23 @@ import {
 export async function getFeeds(notionClient, feederDbId) {
   console.log("[INFO] Start getFeeds() ...");
   try {
-    const response = await notionClient.databases.query({
-      database_id: feederDbId,
-      filter: {
-        property: "Enable",
-        checkbox: {
-          equals: true,
-        },
-      },
-    });
+    const response = await retryAsync(
+      () =>
+        notionClient.databases.query({
+          database_id: feederDbId,
+          filter: {
+            property: "Enable",
+            checkbox: {
+              equals: true,
+            },
+          },
+        }),
+      {
+        label: 'Notion: getFeeds(databases.query)',
+        shouldRetry: isRetryableNotionError,
+        maxAttempts: 12,
+      }
+    );
 
     console.log(`[INFO] getFeeds() response length: ${response.results.length}`);
 
@@ -53,15 +63,23 @@ export async function getFeeds(notionClient, feederDbId) {
  */
 export async function isDuplicatedInReader(notionClient, readerDbId, link) {
   if (!link) return false; // 空文字などは一応 false 扱い
-  const response = await notionClient.databases.query({
-    database_id: readerDbId,
-    filter: {
-      property: "Link",
-      url: {
-        equals: link,
-      },
-    },
-  });
+  const response = await retryAsync(
+    () =>
+      notionClient.databases.query({
+        database_id: readerDbId,
+        filter: {
+          property: "Link",
+          url: {
+            equals: link,
+          },
+        },
+      }),
+    {
+      label: 'Notion: isDuplicatedInReader(databases.query)',
+      shouldRetry: isRetryableNotionError,
+      maxAttempts: 6,
+    }
+  );
   return response.results.length > 0;
 }
 

@@ -34,6 +34,85 @@ export function isWithinOneWeek(dateObj) {
   return dateObj >= oneWeekAgo;
 }
 
+export function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function getErrorCode(error) {
+  if (!error) return null;
+  if (typeof error.code === 'string') return error.code;
+  if (typeof error.cause?.code === 'string') return error.cause.code;
+  return null;
+}
+
+export function isRetryableNotionError(error) {
+  // Network/DNS layer
+  const code = getErrorCode(error);
+  if (
+    code &&
+    [
+      'ENOTFOUND',
+      'EAI_AGAIN',
+      'ECONNRESET',
+      'ETIMEDOUT',
+      'ECONNREFUSED',
+      'ENETUNREACH',
+      'EHOSTUNREACH',
+      'UND_ERR_CONNECT_TIMEOUT',
+      'UND_ERR_SOCKET',
+      'UND_ERR_HEADERS_TIMEOUT',
+      'UND_ERR_BODY_TIMEOUT',
+    ].includes(code)
+  ) {
+    return true;
+  }
+
+  const message = `${error?.message ?? ''} ${error?.cause?.message ?? ''}`.toLowerCase();
+  if (message.includes('enotfound') || message.includes('eai_again') || message.includes('getaddrinfo')) {
+    return true;
+  }
+
+  // Notion SDK API error (HTTP)
+  const status = typeof error?.status === 'number' ? error.status : null;
+  if (status === 429) return true;
+  if (status && status >= 500 && status <= 599) return true;
+  return false;
+}
+
+export async function retryAsync(fn, opts = {}) {
+  const {
+    label = 'operation',
+    maxAttempts = 8,
+    baseDelayMs = 1500,
+    maxDelayMs = 60000,
+    shouldRetry = () => false,
+  } = opts;
+
+  let attempt = 0;
+  let lastError;
+
+  while (attempt < maxAttempts) {
+    attempt += 1;
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= maxAttempts || !shouldRetry(error)) {
+        throw error;
+      }
+      const code = getErrorCode(error);
+      const status = typeof error?.status === 'number' ? error.status : null;
+
+      const delayMs = Math.min(maxDelayMs, Math.round(baseDelayMs * (2 ** (attempt - 1))));
+      const tag = status ? `status=${status}` : code ? `code=${code}` : 'unknown';
+      console.warn(`[WARN] ${label} failed (${tag}). Retrying in ${delayMs}ms... (attempt ${attempt}/${maxAttempts})`);
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError;
+}
+
 /**
  * Extract image URLs from HTML description using img tag parsing.
  */
