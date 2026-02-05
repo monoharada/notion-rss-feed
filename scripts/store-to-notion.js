@@ -4,7 +4,7 @@
  */
 
 import { createNotionClient } from '../notionClient.js';
-import { getISOWeekData, validateEnvVars, runMain } from '../utils.js';
+import { getISOWeekData, isRetryableNotionError, retryAsync, validateEnvVars, runMain } from '../utils.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -72,10 +72,14 @@ async function storeArticleToNotion(notionClient, readerDbId, article) {
     properties.OGP = { files: ogpFiles };
   }
 
-  await notionClient.pages.create({
-    parent: { database_id: readerDbId },
-    properties,
-  });
+  await retryAsync(
+    () =>
+      notionClient.pages.create({
+        parent: { database_id: readerDbId },
+        properties,
+      }),
+    { label: 'Notion: pages.create', shouldRetry: isRetryableNotionError }
+  );
 }
 
 /**
