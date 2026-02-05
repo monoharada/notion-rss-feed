@@ -44,13 +44,15 @@ jobs:
       - name: Filter articles with Claude
         id: filter_articles
         if: steps.check_articles.outputs.has_articles == 'true'
+        continue-on-error: true
+        timeout-minutes: 6
         uses: anthropics/claude-code-action@v1
         with:
           github_token: ${{ github.token }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: github-actions
-          show_full_output: true
+          show_full_output: false
           claude_args: |
             --allowedTools Read,Glob
             --max-turns 60
@@ -84,7 +86,7 @@ jobs:
             }
 
       - name: Build filtered-articles.json from structured output
-        if: steps.check_articles.outputs.has_articles == 'true'
+        if: steps.check_articles.outputs.has_articles == 'true' && steps.filter_articles.outcome == 'success'
         env:
           STRUCTURED_OUTPUT: ${{ steps.filter_articles.outputs.structured_output }}
         run: |
@@ -134,6 +136,10 @@ jobs:
           )
           print(f"[INFO] Wrote filtered-articles.json: {len(merged)} articles")
           PY
+
+      - name: Filter articles locally (fallback)
+        if: steps.check_articles.outputs.has_articles == 'true' && steps.filter_articles.outcome != 'success'
+        run: node scripts/filter-articles-local.js
 
       - name: Validate filtered-articles.json
         if: steps.check_articles.outputs.has_articles == 'true'
