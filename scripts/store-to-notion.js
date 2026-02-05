@@ -96,7 +96,40 @@ async function main() {
   }
 
   const content = fs.readFileSync(inputPath, 'utf-8');
-  const articles = JSON.parse(content);
+  let articles;
+  try {
+    articles = JSON.parse(content);
+  } catch (error) {
+    const message = error?.message ?? String(error);
+    console.error('[FATAL] filtered-articles.json is not valid JSON.');
+    console.error(`[FATAL] ${message}`);
+    console.error(
+      '[HINT] Repro: node -e "JSON.parse(require(\'fs\').readFileSync(\'filtered-articles.json\',\'utf8\'))"'
+    );
+
+    const match = /position\s+(\d+)/i.exec(message);
+    if (match) {
+      const pos = Number(match[1]);
+      if (Number.isFinite(pos)) {
+        const start = Math.max(0, pos - 120);
+        const end = Math.min(content.length, pos + 120);
+        const excerpt = content
+          .slice(start, end)
+          .replaceAll('\n', '\\n')
+          .replaceAll('\r', '\\r')
+          .replaceAll('\t', '\\t');
+        console.error(`[FATAL] Around position ${pos}: ...${excerpt}...`);
+      }
+    }
+
+    throw error;
+  }
+
+  if (!Array.isArray(articles)) {
+    console.error('[FATAL] filtered-articles.json must be a JSON array.');
+    console.error(`[FATAL] Actual type: ${typeof articles}`);
+    throw new Error('filtered-articles.json is not a JSON array');
+  }
 
   console.log(`[INFO] Found ${articles.length} filtered articles to store`);
 
@@ -106,11 +139,21 @@ async function main() {
 
   for (const [index, article] of articles.entries()) {
     try {
+      if (!article || typeof article !== 'object') {
+        throw new Error('Article must be an object');
+      }
+      if (!article.title || typeof article.title !== 'string') {
+        throw new Error('Missing or invalid "title"');
+      }
+      if (!article.link || typeof article.link !== 'string') {
+        throw new Error('Missing or invalid "link"');
+      }
       console.log(`[INFO] [${index + 1}/${articles.length}] Storing: "${article.title}"`);
       await storeArticleToNotion(notionClient, READER_DB_ID, article);
       successCount++;
     } catch (error) {
-      console.error(`[ERROR] Failed to store "${article.title}":`, error.message);
+      const title = article?.title ? `"${article.title}"` : '(unknown title)';
+      console.error(`[ERROR] Failed to store ${title}:`, error?.message ?? String(error));
       errorCount++;
     }
   }
