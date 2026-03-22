@@ -8,9 +8,10 @@ import { createNotionClient } from '../notionClient.js';
 import { createRssParser } from '../rssParser.js';
 import { getFeeds, isDuplicatedInReader } from '../rssToNotion.js';
 import {
-  isWithinOneWeek,
+  isWithinDays,
   extractImageUrlsFromDescription,
   extractDomain,
+  getEnvInt,
   validateEnvVars,
   runMain,
 } from '../utils.js';
@@ -26,6 +27,7 @@ async function collectArticlesFromFeed({
   feedUrl,
   keywords,
   readerDbId,
+  lookbackDays,
 }) {
   console.log(`[INFO] Collecting from: ${feedUrl}`);
   console.log(`[INFO] Keywords: ${JSON.stringify(keywords)}`);
@@ -69,8 +71,10 @@ async function collectArticlesFromFeed({
     }
 
     // 1週間以内かチェック
-    if (!isWithinOneWeek(pubDate)) {
-      console.log(`[INFO] [${index + 1}/${feed.items.length}] "${title}" => older than 1 week => SKIP`);
+    if (!isWithinDays(pubDate, lookbackDays)) {
+      console.log(
+        `[INFO] [${index + 1}/${feed.items.length}] "${title}" => older than ${lookbackDays} days => SKIP`
+      );
       continue;
     }
 
@@ -126,6 +130,9 @@ async function main() {
     'READER_DB_ID',
   ]);
 
+  const lookbackDays = getEnvInt('ARTICLE_LOOKBACK_DAYS', 7);
+  console.log(`[INFO] Lookback window: ${lookbackDays} days`);
+
   const notionClient = createNotionClient(NOTION_TOKEN);
   const parser = createRssParser();
 
@@ -142,6 +149,7 @@ async function main() {
       feedUrl: feed.feedUrl,
       keywords: feed.keywords,
       readerDbId: READER_DB_ID,
+      lookbackDays,
     });
     allArticles.push(...articles);
   }

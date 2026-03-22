@@ -64,6 +64,10 @@ RSS フィードから記事を収集し、Notion データベース（Reader DB
 
 `.env` は `dotenv` により自動で読み込まれます（Git 管理対象外）。
 
+#### チューニング（任意）
+取得件数が少ない場合は `.env` の `ARTICLE_LOOKBACK_DAYS` を増やしてください（例: `14`）。  
+スコア分布や採用件数を調整したい場合は `FILTER_MIN_SCORE` / `FILTER_RECOMMENDED_SCORE` / `FILTER_TUTORIAL_PENALTY` を変更できます。
+
 ### 4. GitHub Actions（オプション）
 
 GitHub Actions で動かす場合は、Secrets に `NOTION_TOKEN` / `FEEDER_DB_ID` / `READER_DB_ID` を登録してください。  

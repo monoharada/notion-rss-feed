@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 dotenv.config({ quiet: true });
 
 export const ONE_WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
+export const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Calculate ISO week number and week year.
@@ -28,10 +29,25 @@ export function getISOWeekData(date) {
  * Check if a date is within the last week.
  */
 export function isWithinOneWeek(dateObj) {
+  return isWithinDays(dateObj, 7);
+}
+
+/**
+ * Check if a date is within the last N days.
+ */
+export function isWithinDays(dateObj, days) {
   if (!dateObj) return false;
   const now = new Date();
-  const oneWeekAgo = new Date(now.getTime() - ONE_WEEK_IN_MS);
-  return dateObj >= oneWeekAgo;
+  const windowMs = Math.max(0, Number(days)) * ONE_DAY_IN_MS;
+  const since = new Date(now.getTime() - windowMs);
+  return dateObj >= since;
+}
+
+export function getEnvInt(name, defaultValue) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return defaultValue;
+  const value = Number.parseInt(String(raw), 10);
+  return Number.isFinite(value) ? value : defaultValue;
 }
 
 export function sleep(ms) {
